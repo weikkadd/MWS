@@ -1,29 +1,32 @@
-# 通知说明（notify-gateway）
+# 通知说明（Telegram 直发）
 
-本仓库的通知**不**再自己发邮件 / Telegram，统一走 **notify-gateway**（[2Bdou/notify-gateway](https://github.com/2Bdou/notify-gateway)）。
+本仓库的通知**不**经过 notify-gateway 中间层，**直接通过 Telegram Bot API 发消息**。
 
-续期脚本把结构化结果（`level` + 每个 Bot / Site 的明细 `details`）上报给网关，网关按项目开关把通知发到邮件 + Telegram。收件人和 Bot 统一在网关设置页配，本仓库**只配两个 Secret**：
+只需配两个 GitHub Secret：
 
-| Secret          | 说明 |
-| --------------- | ---- |
-| `NOTIFY_URL`    | 网关上报地址，完整路径以 `/api/notify` 结尾 |
-| `NOTIFY_TOKEN`  | 网关里对应本项目分配的独立 Key（Bearer 鉴权） |
+| Secret        | 说明 |
+| ------------- | ---- |
+| `TG_BOT_TOKEN` | Telegram Bot Token（@BotFather 创建 bot 后获取） |
+| `TG_CHAT_ID`   | 接收通知的 Chat ID（你的用户 ID 或群组 ID） |
 
-## 怎么配（前置：网关先上线）
+## 怎么配
 
-1. 把 [notify-gateway](https://github.com/2Bdou/notify-gateway) 部署到 Cloudflare，按它的 README 完成初始化。
-2. 网关 **设置** 页配好 SMTP / Telegram（发信通道统一在这配一次）。
-3. 网关后台 **新建项目**，名称和本仓库一致（例如 `puratya-renew`），创建后复制详情页的 `NOTIFY_URL` 和 `NOTIFY_TOKEN`。
-4. 这两个值分别填进本仓库的 GitHub Secret `NOTIFY_URL` / `NOTIFY_TOKEN`。
+1. Telegram 找 [@BotFather](https://t.me/BotFather) → `/newbot` → 取 `TG_BOT_TOKEN`
+2. 给你的 bot 发一条消息（任意内容），然后浏览器打开：
+   ```
+   https://api.telegram.org/bot<TG_BOT_TOKEN>/getUpdates
+   ```
+   找 `"chat":{"id":xxxxx}` 里的数字，就是 `TG_CHAT_ID`
+3. 两个值分别填进仓库 **Settings → Secrets → Actions** 的 `TG_BOT_TOKEN` 和 `TG_CHAT_ID`
 
-> 网关没配 SMTP / Telegram 时，上报仍会成功（通道返回 `mock_*` messageId），任务也会进网关后台，只是不会真发信。续期本身不受影响。
+> 不配通知也能正常续期，`TG_BOT_TOKEN` / `TG_CHAT_ID` 留空时自动跳过通知。
 
-## 本仓库怎么上报
+## 通知格式
 
-脚本 `renew.py` 在三种情况下上报：
+脚本在三种情况下发通知：
 
-- **token 失效**：`level="failed"`，提醒你更新 `MWS_TOKEN`。
-- **账号下没有对象**：`level="success"`，正文说明跳过。
-- **正常续期**：按结果设 `level`——全部成功 `success`，有失败 `partial`；`data` 带 `total / success / failed`，`details` 里每个对象一条 `{id, name, status, error/message}`。
+- **token 失效**：❌ 提醒你更新 `MWS_TOKEN`
+- **账号下没有对象**：✅ 说明跳过
+- **正常续期**：全部成功 ✅ / 有失败 ⚠️，附每个 Bot/Site 的续期结果和总计统计
 
-上报失败只打 `::warning::` 日志，**不阻断续期主流程**。上报接口的完整字段和错误码见 [notify-gateway/docs/renew-client.md](https://github.com/2Bdou/notify-gateway/blob/main/docs/renew-client.md)。
+通知失败只打 `::warning::` 日志，**不阻断续期主流程**。

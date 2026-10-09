@@ -13,9 +13,7 @@ POST /api/bots/{id}/renew     # Bot 续期
 POST /api/sites/{id}/renew    # 网站续期
 ```
 
-脚本每周一、三、五定时跑一次，把账号下所有 Bot / 网站全部续期，然后通过 **notify-gateway**（[2Bdou/notify-gateway](https://github.com/2Bdou/notify-gateway)）统一上报结果，网关再把通知发到你的邮件 + Telegram。
-
-> 通知通道（SMTP / Telegram）收件人统一在网关后台配置，本仓库**不**内置、也**不**配 SMTP / Bot Token / 收件人。只需给网关上报地址和 Key。
+脚本每周一、三、五定时跑一次，把账号下所有 Bot / 网站全部续期，然后**直接发 Telegram 通知**告诉你结果。
 
 ## 用法（3 步）
 
@@ -30,12 +28,14 @@ POST /api/sites/{id}/renew    # 网站续期
 | Name           | 值                                   | 必填 |
 | -------------- | ------------------------------------ | ---- |
 | `MWS_TOKEN`    | 你的登录 token（下面教你怎么拿）       | ✅   |
-| `NOTIFY_URL`   | 通知网关上报地址（以 `/api/notify` 结尾） | ✅   |
-| `NOTIFY_TOKEN` | 网关里该项目分配的独立 Key           | ✅   |
+| `TG_BOT_TOKEN` | Telegram Bot Token（@BotFather 创建） | ✅   |
+| `TG_CHAT_ID`   | 接收通知的 Chat ID（你的用户/群组 ID） | ✅   |
 
-> `NOTIFY_URL` / `NOTIFY_TOKEN` 在网关后台 **项目详情页** 复制（网关的部署、SMTP / Telegram 配置见 [notify-gateway](https://github.com/2Bdou/notify-gateway) 的 README）。一个续期仓库对应网关里的一个项目，各用一把 Key。
+> **怎么拿 TG_BOT_TOKEN**：Telegram 找 [@BotFather](https://t.me/BotFather) → `/newbot` → 取 token。
 >
-> 通知通道最终能不能发出去，取决于网关里该项目开关和网关设置页有没有配 SMTP / Telegram。**配好网关前也能正常续期**，只是没有通知。
+> **怎么拿 TG_CHAT_ID**：先给你的 bot 发一条消息，然后浏览器打开 `https://api.telegram.org/bot<TG_BOT_TOKEN>/getUpdates`，找 `"chat":{"id":xxxxx}` 里的数字。
+>
+> 不想配通知？只填 `MWS_TOKEN` 就能正常续期，`TG_BOT_TOKEN` / `TG_CHAT_ID` 留空时跳过通知，不影响续期。
 
 ### 3. 手动跑一次验证
 
@@ -52,7 +52,7 @@ POST /api/sites/{id}/renew    # 网站续期
 
 ## ⚠️ Token 有效期
 
-`MWS_TOKEN` 是个 JWT，**约 26 天后过期**。过期后脚本会检测到，向网关上报一条 `token 已失效` 的失败通知，你重新抓一次新 token 更新到 Secret 即可。
+`MWS_TOKEN` 是个 JWT，**约 26 天后过期**。过期后脚本会检测到，发一条 Telegram 通知提醒你 `token 已失效`，你重新抓一次新 token 更新到 Secret 即可。
 
 ## 改运行时间
 

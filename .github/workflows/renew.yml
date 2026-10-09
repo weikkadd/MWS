@@ -26,8 +26,8 @@ jobs:
       - name: 🚀 运行续期脚本
         env:
           MWS_TOKEN: ${{ secrets.MWS_TOKEN }}
-          # 通知走 notify-gateway，统一发邮件 + Telegram（仓库不内置 SMTP/TG）
-          NOTIFY_URL: ${{ secrets.NOTIFY_URL }}
-          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
+          # 通知直接发 Telegram（不依赖 notify-gateway）
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TZ: Asia/Shanghai
         run: python3 renew.py
