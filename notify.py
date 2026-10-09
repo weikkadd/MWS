@@ -12,8 +12,8 @@ import os
 import urllib.request
 import urllib.error
 
-TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
-TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "").strip()
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "").strip()
 
 TG_API = "https://api.telegram.org/bot{}/sendMessage"
 
