@@ -1,72 +1,56 @@
-# MWS 自动续期（puratya-renew）
+## Auto-Renew-MWS
 
-[cloud.puratya.com](https://cloud.puratya.com)（MWS）的 Bot / 网站有 **7 天倒计时**，到期会自动停止。点一下 `Renew` 按钮就能把倒计时重置回 7 天。
+这是一个基于 GitHub Actions 的自动化脚本，用于自动续期 [MWS](https://cloud.m-ws.cc) 服务。
 
-这个项目帮你**每周一、三、五自动点续期**，让你挂在上面的 Bot / 网站永不停止，完全免费、不用自己每天登录去点。
+续期逻辑：优先使用Cookie请求api续期，过期自动使用Discord登录获取新的Cookie再续期，并更新新的Cookie到secrets,以供下次续期使用,如果最终结果失败,那就代表该换discord token了
 
-## 原理
+⚠️ 首次运行建议随意设置一个错误的COOKIE触发Discord token登录自动获取新的Cookie，后期自动更新Cookie到Secrets
 
-续期按钮背后其实就是一次请求：
+━━━━━━━━━━━━━━━━━━━━━━
+### 🔐 Secrets 配置说明
 
-```
-POST /api/bots/{id}/renew     # Bot 续期
-POST /api/sites/{id}/renew    # 网站续期
-```
+| Secret 名称         | 是否必填 | 说明                                              |
+|---------------------|----------|---------------------------------------------------|
+| EMAIL              | ❌ 可选  | 用于通知使用的Email,可随意填写                         |
+| COOKIE             | ✅ 必填   | __Host-mrtcloud_token的值,有效期1个月,首次可随意填写   |
+| SERVER_IDS         | ✅ 必填   | 服务器id, 切换到网络,点进服务器看请求记录，多个用逗号隔开，例如：9001,9002   |
+| DISCORD_TOKEN      | ✅ 必填  | Discord Token，SESSION_TOKEN失效时自动OAuth登录        |
+| GH_TOKEN           | ✅ 必填   | GitHub(classic) token,用于自动更新session_token,以ghp_xxx开头|
+| NODE_LINK          | ❌ 可选  | 代理链接（如 vless:// vmess:// trojan:// hysteria2:// tuic:// anytls:// socks5:// )|
+| TG_BOT_TOKEN       | ❌ 可选  | Telegram Bot Token（用于发送通知）                      |
+| TG_CHAT_ID         | ❌ 可选  | Telegram Chat ID（接收通知的用户或群组 ID）               |
 
-脚本每周一、三、五定时跑一次，把账号下所有 Bot / 网站全部续期，然后**直接发 Telegram 通知**告诉你结果。
+━━━━━━━━━━━━━━━━━━━━━━
 
-## 用法（3 步）
+### 🔐 `NODE_LINK`代理配置说明
 
-### 1. Fork 本仓库
+| 协议类型         | 格式         | 说明         |
+|-----------------|--------------|--------------|
+| vless           | vless://uuid@server:port?security=reality&sni=...&type=ws&...   | 可直接使用v2rayN导出的链接                |
+| vmess           | vmess://base64encoded...  | 可直接使用v2rayN导出的链接                |
+| trojan          | trojan://password@server:port?sni=...&type=ws&...   | 可直接使用v2rayN导出的链接                |
+| anytls          | anytls://uuid@server:port... | 可直接使用v2rayN导出的链接                |
+| tuic            | tuic://uuid:password@server:port...   | 可直接使用v2rayN导出的链接                |
+| hysteria2       | hysteria2://base64@server:port...  | 可直接使用v2rayN导出的链接                |               |
+| socks5:         | socks或socks5://user:pass@server:port   | 可直接使用v2rayN导出的链接,不建议  |
 
-点右上角 **Fork**。
+━━━━━━━━━━━━━━━━━━━━━━
 
-### 2. 填 Secrets
+### SERVER_ID的获取
 
-进入你的仓库 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**，填：
+<img width="800" height="200" alt="image" src="https://github.com/user-attachments/assets/04624397-ff2e-4010-bee0-d704d95bf6ab" />
 
-| Name           | 值                                   | 必填 |
-| -------------- | ------------------------------------ | ---- |
-| `MWS_TOKEN`    | 你的登录 token（下面教你怎么拿）       | ✅   |
-| `TG_BOT_TOKEN` | Telegram Bot Token（@BotFather 创建） | ✅   |
-| `TG_CHAT_ID`   | 接收通知的 Chat ID（你的用户/群组 ID） | ✅   |
 
-> **怎么拿 TG_BOT_TOKEN**：Telegram 找 [@BotFather](https://t.me/BotFather) → `/newbot` → 取 token。
->
-> **怎么拿 TG_CHAT_ID**：先给你的 bot 发一条消息，然后浏览器打开 `https://api.telegram.org/bot<TG_BOT_TOKEN>/getUpdates`，找 `"chat":{"id":xxxxx}` 里的数字。
->
-> 不想配通知？只填 `MWS_TOKEN` 就能正常续期，`TG_BOT_TOKEN` / `TG_CHAT_ID` 留空时跳过通知，不影响续期。
+## 使用
 
-### 3. 手动跑一次验证
+### GitHub Actions 运行步骤
 
-仓库 → **Actions** → 左侧 **MWS Renew** → **Run workflow** → **Run workflow**。看到绿色 ✅ 就成功了。
+1. Fork 本仓库  
+2. 在仓库 Secrets 中配置必填的环境变量,（可选）配置 `TG_BOT_TOKEN`、`TG_CHAT_ID`、`NODE_LINK`
+3. 在Actions菜单允许 `I understand my workflows, go ahead and enable them` 按钮
+4. Actions菜单里手动触发 `workflow_dispatch`  
+5. cron运行时间为每隔6天运行一次，可自行更改时间,避免集中同一时间运行需要排队更久
 
-## 怎么拿 MWS_TOKEN
+---
 
-1. 浏览器登录 [cloud.puratya.com](https://cloud.puratya.com)
-2. 按 `F12` 打开开发者工具 → 顶部选 **Network（网络）**
-3. 刷新页面（或点一下 `Renew` 按钮）
-4. 点任意一个 `bots` / `renew` 请求
-5. 在 **Request Headers** 里找到 `cookie:` 这一行，复制 `__Host-mrtcloud_token=` **后面那一长串**（是 `eyJ...` 开头的）
-6. 粘贴进 GitHub Secret `MWS_TOKEN`
-
-## ⚠️ Token 有效期
-
-`MWS_TOKEN` 是个 JWT，**约 26 天后过期**。过期后脚本会检测到，发一条 Telegram 通知提醒你 `token 已失效`，你重新抓一次新 token 更新到 Secret 即可。
-
-## 改运行时间
-
-默认每周一、三、五**北京时间 09:00** 跑一次。要改，编辑 `.github/workflows/renew.yml` 里的 `cron`（注意 GitHub 用 UTC 时间，北京时间减 8 小时；5 个字段是「分 时 日 月 星期」，星期 1=周一）：
-
-```
-'0 1 * * 1,3,5'   # UTC 01:00 = 北京时间 09:00，周一三五
-```
-
-- 每天：`'0 1 * * *'`
-- 每 3 天：`'0 1 */3 * *'`（月末会跳，介意就用星期枚举）
-
-改完 commit 到默认分支生效。
-
-## 免责声明
-
-本项目仅供个人使用，用于续期你自己的账号资源。请遵守 MWS 平台的服务条款，不要用于批量注册或薅羊毛。
+**⚠️ 免责声明**：本脚本仅供学习交流使用，使用者需遵守 [MWS](https://cloud.m-ws.cc) 的服务条款。因使用本脚本造成的任何问题，作者不承担任何责任。
